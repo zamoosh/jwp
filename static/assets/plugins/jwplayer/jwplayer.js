@@ -1,4 +1,3 @@
-
 /*!
    JW Player version 8.26.1
    Copyright (c) 2022, JW Player, All Rights Reserved
