@@ -2,6 +2,9 @@ class JwPlayer {
     constructor(elementId) {
         this.player = jwplayer(elementId).setup({
             file: "./media/videos/3/master.m3u8",
+            skin: {
+                name: "myskin"
+            },
             "logo": {
                 "file": "./static/assets/images/vidoneplus-logo-1.png",
                 "link": "https://google.com",
@@ -10,19 +13,25 @@ class JwPlayer {
             },
             
             // shows a small player on scroll
-            "floating": {
-                "dismissible": false
-            },
+            // "floating": {
+            //     "dismissible": true
+            // },
             image: './media/images/logo.jpg',
             width: "100%",
             height: "100%",
             stretching: "bestfit"
         });
         this.addComment();
+        this.preventForm();
     }
     
     addComment() {
         let player = this;
+        
+        // function closeModal(player) {
+        //     player.add_comment_modal.close();
+        // }
+        
         this.player.addButton(
             "./static/assets/buttons/comment.svg",
             "add comment",
@@ -43,10 +52,10 @@ class JwPlayer {
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form name="set_tip">
+                        <form name="set_point">
                             <div class="mb-3">
-                                <label for="tip" class="form-label text-dark">point tip</label>
-                                <input required autofocus type="text" class="form-control" name="tip" id="tip">
+                                <label for="point" class="form-label text-dark">point</label>
+                                <input required autofocus type="text" class="form-control" name="point" id="point">
                             </div>
                             <div class="mb-3">
                                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">close</button>
@@ -71,9 +80,10 @@ class JwPlayer {
             point.style.left = current_position;
             point.style.height = '5px';
             point.style.width = '5px';
+            point.style.zIndex = '9999';
             point.style.backgroundColor = 'red';
             point.style.transition = 'all 0.3s';
-            document.querySelector('div.jw-slider-container').appendChild(point);
+            document.querySelector('div.jw-progress').appendChild(point);
             point.addEventListener('mouseover', function () {
                 point.style.transform = 'scale(1.2)';
             });
@@ -82,10 +92,21 @@ class JwPlayer {
                 point.style.transform = 'scale(1)';
             });
             
-            if (!this.add_comment_modal) {
-                this.add_comment_modal = new bootstrap.Modal(document.getElementById("add_comment"));
-            }
-            this.add_comment_modal.show();
+            player.add_comment_modal = new bootstrap.Modal(document.getElementById("add_comment"));
+            player.add_comment_modal.show();
         }
+    }
+    
+    preventForm() {
+        let player = this;
+        console.log(this);
+        console.log('preventing');
+        let form = document.querySelector('form[name="set_point"]');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            let point = form.querySelector('input[name="point"]');
+            console.log(point.value);
+            player.add_comment_modal.hide();
+        });
     }
 }
