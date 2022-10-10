@@ -2,10 +2,17 @@ class JwPlayer {
     constructor(elementId) {
         this.player = jwplayer(elementId).setup({
             file: "./media/videos/3/master.m3u8",
+            tracks: [
+                {
+                    "kind": "captions",
+                    "file": "./markers.vtt",
+                    "label": "English"
+                },
+            ],
             skin: {
                 name: "myskin"
             },
-            "logo": {
+            logo: {
                 "file": "./static/assets/images/vidoneplus-logo-1.png",
                 "link": "https://google.com",
                 "hide": "true",
@@ -16,10 +23,14 @@ class JwPlayer {
             // "floating": {
             //     "dismissible": true
             // },
-            image: './media/images/logo.jpg',
+            image: "./media/images/logo.jpg",
             width: "100%",
             height: "100%",
             stretching: "bestfit"
+        });
+        
+        this.player.on('fullscreen', function () {
+        
         });
         this.addComment();
         this.preventForm();
@@ -38,12 +49,12 @@ class JwPlayer {
             showModal,
             "add_comment"
         );
-        this.add_comment = document.createElement('div');
-        this.add_comment.classList.add('modal', 'fade');
-        this.add_comment.setAttribute('id', 'add_comment');
-        this.add_comment.setAttribute('tabindex', '-1');
-        this.add_comment.setAttribute('aria-labelledby', 'add_comment_modal');
-        this.add_comment.setAttribute('aria-hidden', 'true');
+        this.add_comment = document.createElement("div");
+        this.add_comment.classList.add("modal", "fade");
+        this.add_comment.setAttribute("id", "add_comment");
+        this.add_comment.setAttribute("tabindex", "-1");
+        this.add_comment.setAttribute("aria-labelledby", "add_comment_modal");
+        this.add_comment.setAttribute("aria-hidden", "true");
         this.add_comment.innerHTML = `
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -71,25 +82,27 @@ class JwPlayer {
         function showModal() {
             player.player.pause();
             let current_time = player.player.getPosition(); // === progress_bar.style.width
-            console.log(current_time);
             // player.player.duration === 100%
-            let progress_bar = document.querySelector('div.jw-progress');
-            let current_position = progress_bar.style.width;
-            let point = document.createElement('span');
-            point.style.position = 'fixed';
-            point.style.left = current_position;
-            point.style.height = '5px';
-            point.style.width = '5px';
-            point.style.zIndex = '9999';
-            point.style.backgroundColor = 'red';
-            point.style.transition = 'all 0.3s';
-            document.querySelector('div.jw-progress').appendChild(point);
-            point.addEventListener('mouseover', function () {
-                point.style.transform = 'scale(1.2)';
+            let progress_bar = document.querySelector("div.jw-progress");
+            let current_position = Number(progress_bar.style.width.replace("%", ""));
+            let full_width = progress_bar.parentElement.getBoundingClientRect().width;
+            let left = (current_position * full_width) / 100;
+            
+            let point = document.createElement("span");
+            point.style.position = "fixed";
+            point.style.left = `${left}px`;
+            point.style.height = "5px";
+            point.style.width = "5px";
+            point.style.zIndex = "1080";
+            point.style.backgroundColor = "red";
+            point.style.transition = "all 0.3s";
+            document.querySelector("div.jw-progress").appendChild(point);
+            point.addEventListener("mouseover", function () {
+                point.style.transform = "scale(1.2)";
             });
             
-            point.addEventListener('mouseleave', function () {
-                point.style.transform = 'scale(1)';
+            point.addEventListener("mouseleave", function () {
+                point.style.transform = "scale(1)";
             });
             
             player.add_comment_modal = new bootstrap.Modal(document.getElementById("add_comment"));
@@ -99,14 +112,12 @@ class JwPlayer {
     
     preventForm() {
         let player = this;
-        console.log(this);
-        console.log('preventing');
-        let form = document.querySelector('form[name="set_point"]');
-        form.addEventListener('submit', function (e) {
+        let form = document.querySelector("form[name='set_point']");
+        form.addEventListener("submit", function (e) {
             e.preventDefault();
-            let point = form.querySelector('input[name="point"]');
-            console.log(point.value);
+            let point = form.querySelector("input[name='point']");
             player.add_comment_modal.hide();
+            point.value = "";
         });
     }
 }
