@@ -1,5 +1,11 @@
 class JwPlayer {
-    constructor(elementId) {
+    progress_bar_width;
+    wrong_scale;
+    player;
+    add_comment_modal;
+    
+    
+    constructor(elementId, markers) {
         this.player = jwplayer(elementId).setup({
             file: "./media/videos/3/master.m3u8",
             tracks: [
@@ -7,7 +13,7 @@ class JwPlayer {
                     "kind": "captions",
                     "file": "./markers.vtt",
                     "label": "English"
-                },
+                }
             ],
             skin: {
                 name: "myskin"
@@ -28,12 +34,11 @@ class JwPlayer {
             height: "100%",
             stretching: "bestfit"
         });
-        
-        this.player.on('fullscreen', function () {
-        
-        });
         this.addComment();
         this.preventForm();
+        if (markers)
+            this.setMarkers();
+        this.fixPointPosition();
     }
     
     addComment() {
@@ -80,6 +85,7 @@ class JwPlayer {
         document.body.appendChild(this.add_comment);
         
         function showModal() {
+            player.player.setFullscreen(false);
             player.player.pause();
             let current_time = player.player.getPosition(); // === progress_bar.style.width
             // player.player.duration === 100%
@@ -91,7 +97,7 @@ class JwPlayer {
             let point = document.createElement("span");
             point.style.position = "fixed";
             point.style.left = `${left}px`;
-            point.style.height = "5px";
+            point.style.height = "100%";
             point.style.width = "5px";
             point.style.zIndex = "1080";
             point.style.backgroundColor = "red";
@@ -118,6 +124,38 @@ class JwPlayer {
             let point = form.querySelector("input[name='point']");
             player.add_comment_modal.hide();
             point.value = "";
+        });
+    }
+    
+    setMarkers() {
+        console.log('setting markers');
+    }
+    
+    fixPointPosition() {
+        let player = this;
+        let progress_bar;
+        this.player.on('meta', function () {
+            progress_bar = document.querySelector('div.jw-progress');
+            player.progress_bar_width = progress_bar.parentElement.getBoundingClientRect().width;
+        });
+        
+        player.player.on('fullscreen', function () {
+            setTimeout(function () {
+                let p_w = progress_bar.parentElement.getBoundingClientRect().width;
+                if (!player.wrong_scale)
+                    player.wrong_scale = p_w / player.progress_bar_width;
+                let points = progress_bar.children;
+                for (let point of points) {
+                    let left2;
+                    let left1 = Number(point.style.left.replace('px', ''));
+                    if (p_w === player.progress_bar_width) {
+                        left2 = left1 / player.wrong_scale;
+                    } else {
+                        left2 = left1 * player.wrong_scale;
+                    }
+                    point.style.left = `${left2}px`;
+                }
+            }, 100);
         });
     }
 }
