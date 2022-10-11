@@ -3,7 +3,8 @@ class JwPlayer {
     wrong_scale;
     player;
     add_comment_modal;
-    
+    add_comment;
+    markers = [];
     
     constructor(elementId, markers) {
         this.player = jwplayer(elementId).setup({
@@ -15,6 +16,7 @@ class JwPlayer {
                     "label": "English"
                 }
             ],
+            // see this for more info: https://docs.jwplayer.com/players/docs/jw8-styling-and-behavior#implementing-your-css
             skin: {
                 name: "myskin"
             },
@@ -24,7 +26,6 @@ class JwPlayer {
                 "hide": "true",
                 "position": "top-left"
             },
-            
             // shows a small player on scroll
             // "floating": {
             //     "dismissible": true
@@ -34,14 +35,16 @@ class JwPlayer {
             height: "100%",
             stretching: "bestfit"
         });
-        this.addComment();
+        this.addCommentButton();
         this.preventForm();
-        if (markers)
-            this.setMarkers();
+        if (markers) {
+            this.markers = this.markers.concat(markers);
+            this.setMarkers(this.markers);
+        }
         this.fixPointPosition();
     }
     
-    addComment() {
+    addCommentButton() {
         let player = this;
         
         // function closeModal(player) {
@@ -87,14 +90,15 @@ class JwPlayer {
         function showModal() {
             player.player.setFullscreen(false);
             player.player.pause();
-            let current_time = player.player.getPosition(); // === progress_bar.style.width
-            // player.player.duration === 100%
-            let progress_bar = document.querySelector("div.jw-progress");
+            
+            /*let progress_bar = document.querySelector("div.jw-progress");
             let current_position = Number(progress_bar.style.width.replace("%", ""));
             let full_width = progress_bar.parentElement.getBoundingClientRect().width;
-            let left = (current_position * full_width) / 100;
+            let left = (current_position * full_width) / 100;*/
             
-            let point = document.createElement("span");
+            let point = player.createPoint();
+            document.querySelector("div.jw-progress").appendChild(point);
+            /*let point = document.createElement("span");
             point.style.position = "fixed";
             point.style.left = `${left}px`;
             point.style.height = "100%";
@@ -109,11 +113,39 @@ class JwPlayer {
             
             point.addEventListener("mouseleave", function () {
                 point.style.transform = "scale(1)";
-            });
+            });*/
             
             player.add_comment_modal = new bootstrap.Modal(document.getElementById("add_comment"));
             player.add_comment_modal.show();
         }
+    }
+    
+    createPoint(marker) {
+        let point;
+        let progress_bar = document.querySelector("div.jw-progress");
+        let full_width = progress_bar.parentElement.getBoundingClientRect().width;
+        if (marker) {
+            console.log(marker.title, marker.time);
+        } else {
+            let current_position = Number(progress_bar.style.width.replace("%", ""));
+            let left = (current_position * full_width) / 100;
+            point = document.createElement("span");
+            point.style.position = "absolute";
+            point.style.left = `${left}px`;
+            point.style.height = "100%";
+            point.style.width = "5px";
+            point.style.zIndex = "1080";
+            point.style.backgroundColor = "red";
+            point.style.transition = "all 0.3s";
+            point.addEventListener("mouseover", function () {
+                point.style.transform = "scale(1.2)";
+            });
+            
+            point.addEventListener("mouseleave", function () {
+                point.style.transform = "scale(1)";
+            });
+        }
+        return point;
     }
     
     preventForm() {
@@ -127,14 +159,25 @@ class JwPlayer {
         });
     }
     
-    setMarkers() {
-        console.log('setting markers');
+    setMarkers(markers) {
+        let player = this;
+        this.player.on("firstFrame", function () {
+            console.log(player.player.getDuration());
+            for (const marker of markers) {
+                player.createPoint(marker);
+            }
+        });
+    }
+    
+    createMarkers(title, time) {
+        console.log("creating markers");
+        return {"title": title, "time": time};
     }
     
     fixPointPosition() {
         let player = this;
         let progress_bar;
-        this.player.on('meta', function () {
+        this.player.on('ready', function () {
             progress_bar = document.querySelector('div.jw-progress');
             player.progress_bar_width = progress_bar.parentElement.getBoundingClientRect().width;
         });
