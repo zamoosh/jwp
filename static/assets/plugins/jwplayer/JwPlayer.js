@@ -1,4 +1,6 @@
 class JwPlayer {
+    progress_bar_container;
+    progress_tooltip;
     progress_bar_width;
     wrong_scale;
     player;
@@ -38,7 +40,7 @@ class JwPlayer {
         this.addCommentButton();
         this.preventForm();
         if (markers) {
-            this.markers = this.markers.concat(markers);
+            this.updateMarkers(markers);
             this.setMarkers(this.markers);
         }
         this.fixPointPosition();
@@ -47,11 +49,6 @@ class JwPlayer {
     // this method adds "add comment" button.
     addCommentButton() {
         let player = this;
-        
-        // function closeModal(player) {
-        //     player.add_comment_modal.close();
-        // }
-        
         this.player.addButton(
             "./static/assets/buttons/comment.svg",
             "add comment",
@@ -75,7 +72,7 @@ class JwPlayer {
                         <form name="set_point">
                             <div class="mb-3">
                                 <label for="point" class="form-label text-dark">point</label>
-                                <input required autofocus type="text" class="form-control" name="point" id="point">
+                                <input required autofocus type="text" maxlength="255" class="form-control" name="point" id="point">
                             </div>
                             <div class="mb-3">
                                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">close</button>
@@ -91,69 +88,68 @@ class JwPlayer {
         function showModal() {
             player.player.setFullscreen(false);
             player.player.pause();
-            
-            /*let progress_bar = document.querySelector("div.jw-progress");
-            let current_position = Number(progress_bar.style.width.replace("%", ""));
-            let full_width = progress_bar.parentElement.getBoundingClientRect().width;
-            let left = (current_position * full_width) / 100;*/
-            
-            let point = player.createPoint();
-            player.addPointToProgress(point);
-            /*let point = document.createElement("span");
-            point.style.position = "fixed";
-            point.style.left = `${left}px`;
-            point.style.height = "100%";
-            point.style.width = "5px";
-            point.style.zIndex = "1080";
-            point.style.backgroundColor = "red";
-            point.style.transition = "all 0.3s";
-            document.querySelector("div.jw-progress").appendChild(point);
-            point.addEventListener("mouseover", function () {
-                point.style.transform = "scale(1.2)";
-            });
-            
-            point.addEventListener("mouseleave", function () {
-                point.style.transform = "scale(1)";
-            });*/
-            
-            player.add_comment_modal = new bootstrap.Modal(document.getElementById("add_comment"));
+            if (!player.add_comment_modal)
+                player.add_comment_modal = new bootstrap.Modal(document.getElementById("add_comment"));
             player.add_comment_modal.show();
         }
     }
     
     // this method returns a POINT to add It in progress bar
     createPoint(marker) {
+        let player = this;
         let point;
         let progress_bar = document.querySelector("div.jw-progress");
         let full_width = progress_bar.parentElement.getBoundingClientRect().width;
         let left;
         if (marker) {
             left = full_width * (marker.time / this.player.getDuration());
-        } else {
-            let current_position = Number(progress_bar.style.width.replace("%", ""));
-            left = (current_position * full_width) / 100;
+            point = document.createElement("span");
+            point.style.position = "absolute";
+            point.style.left = `${left}px`;
+            point.style.height = "100%";
+            point.style.width = "7px";
+            point.style.zIndex = "1080";
+            point.style.backgroundColor = "red";
+            point.style.transition = "all 0.1s";
+            point.dataset.text = marker.title;
+            point.addEventListener("mousemove", function () {
+                player.progress_tooltip.style.fontSize = "16px";
+                player.progress_tooltip.style.overflow = "hidden";
+                let space = Math.floor(marker.title.replaceAll(" ", "").length / 8);
+                while (space > 0) {
+                    let left_space = Number(point.style.left.replace("px", ""));
+                    if ((space * 120) + 20 < left_space) {
+                        space = space * 120;
+                        break
+                    }
+                    space--;
+                }
+                player.progress_tooltip.style.minWidth = `${space}px`;
+                player.progress_tooltip.style.transition = "min-width 0.1s, font-size 0.1s";
+                player.progress_tooltip.style.whiteSpace = "normal";
+                let text = player.progress_tooltip.innerHTML;
+                player.progress_tooltip.innerHTML = `
+                    <div style="color: #333333">${point.dataset.text}</div>
+                    <div style='height: 8px'></div>
+                    <div style="color: #333333">${text}</div>
+                `;
+            });
+            
+            point.addEventListener("mouseleave", function () {
+                player.progress_tooltip.style.fontSize = "10px";
+                player.progress_tooltip.style.minWidth = "44px";
+            });
         }
-        point = document.createElement("span");
-        point.style.position = "absolute";
-        point.style.left = `${left}px`;
-        point.style.height = "100%";
-        point.style.width = "5px";
-        point.style.zIndex = "1080";
-        point.style.backgroundColor = "red";
-        point.style.transition = "all 0.3s";
-        point.addEventListener("mouseover", function () {
-            point.style.transform = "scale(1.2)";
-        });
-        
-        point.addEventListener("mouseleave", function () {
-            point.style.transform = "scale(1)";
-        });
         return point;
     }
     
     // this method maps the point to the progress bar
     addPointToProgress(point) {
-        document.querySelector("div.jw-progress").appendChild(point);
+        if (!this.progress_bar_container) {
+            this.progress_bar_container = document.querySelector("div.jw-progress");
+            this.progress_tooltip = document.querySelector('span.jw-time-time');
+        }
+        this.progress_bar_container.appendChild(point);
     }
     
     // this method prevents the "add comment form" from being processed
@@ -162,9 +158,13 @@ class JwPlayer {
         let form = document.querySelector("form[name='set_point']");
         form.addEventListener("submit", function (e) {
             e.preventDefault();
-            let point = form.querySelector("input[name='point']");
+            let title = form.querySelector("input[name='point']");
+            let marker = player.createMarker(title.value, Math.floor(player.player.getPosition() * 10) / 10);
+            player.markers.push(marker);
             player.add_comment_modal.hide();
-            point.value = "";
+            title.value = "";
+            let point = player.createPoint(marker);
+            player.addPointToProgress(point);
         });
     }
     
@@ -183,8 +183,15 @@ class JwPlayer {
     }
     
     // this method creates a marker object
-    createMarkers(title, time) {
-        return {"title": title, "time": time};
+    createMarker(title, time) {
+        return {"title": title, "time": time, "id": this.markers.length + 1};
+    }
+    
+    updateMarkers(markers) {
+        for (let i = 0; i < markers.length; i++) {
+            let marker = this.createMarker(markers[i].title, markers[i].time);
+            this.markers.push(marker);
+        }
     }
     
     // this method fixes the position of points in progress bar
