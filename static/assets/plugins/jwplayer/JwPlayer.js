@@ -7,6 +7,7 @@ class JwPlayer {
     add_comment_modal;
     add_comment;
     markers = [];
+    comment_list;
     
     constructor(elementId, markers) {
         this.player = jwplayer(elementId).setup({
@@ -38,6 +39,7 @@ class JwPlayer {
             stretching: "bestfit"
         });
         this.addCommentButton();
+        this.addCommentList(elementId);
         this.preventForm();
         if (markers) {
             this.updateMarkers(markers);
@@ -120,7 +122,7 @@ class JwPlayer {
                     let left_space = Number(point.style.left.replace("px", ""));
                     if ((space * 120) + 20 < left_space) {
                         space = space * 120;
-                        break
+                        break;
                     }
                     space--;
                 }
@@ -220,6 +222,63 @@ class JwPlayer {
                     point.style.left = `${left2}px`;
                 }
             }, 100);
+        });
+    }
+    
+    // this method adds a button to the toolbar to see all points
+    addCommentList(elementId) {
+        let player = this;
+        
+        // toggle side menu (comment list panel)
+        function toggleSideMenu() {
+            let side_menu = player.comment_list;
+            if (side_menu.ariaExpanded === "false") {
+                side_menu.ariaExpanded = "true";
+                side_menu.style.width = "30%";
+            } else {
+                side_menu.ariaExpanded = "false";
+                side_menu.style.width = "0";
+            }
+        }
+        
+        player.player.addButton(
+            "./static/assets/buttons/list.svg",
+            "comment list",
+            toggleSideMenu,
+            "comment list"
+        );
+        
+        this.player.on('firstFrame', function () {
+            let wrapper = document.getElementById(elementId);
+            let side_menu = document.createElement("div");
+            side_menu.ariaExpanded = "false";
+            side_menu.style.width = "0";
+            side_menu.style.height = "100%";
+            side_menu.style.position = "absolute";
+            side_menu.style.top = "0";
+            side_menu.style.right = "0";
+            side_menu.style.backgroundColor = "#1a1a1aba";
+            side_menu.style.zIndex = "1080";
+            side_menu.style.transition = "all 0.3s";
+            player.comment_list = side_menu;
+            wrapper.appendChild(side_menu);
+            
+            let close = document.createElement("button");
+            close.classList.add("btn");
+            close.innerHTML = `
+                <svg style="color: white" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/>
+                </svg>
+            `;
+            close.style.transition = "all 0.3s";
+            close.style.position = "absolute";
+            close.style.left = "10px";
+            close.style.top = "10px";
+            side_menu.appendChild(close);
+            
+            close.addEventListener('click', function () {
+                toggleSideMenu();
+            });
         });
     }
 }
