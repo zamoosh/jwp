@@ -115,6 +115,8 @@ class JwPlayer {
             point.style.zIndex = "1080";
             point.style.backgroundColor = "red";
             point.style.transition = "all 0.1s";
+            point.style.display = "none";
+            point.id = `point${marker.id}`;
             point.dataset.text = marker.title;
             point.addEventListener("mousemove", function () {
                 player.progress_tooltip.style.fontSize = "16px";
@@ -176,7 +178,7 @@ class JwPlayer {
                                 time: ${marker.time}
                             </span>
                             <a class="text-decoration-none text-white point"
-                                data-time="${marker.time}" href="javascript:void(0)"
+                                data-time="${marker.time}" data-id="point${marker.id}" href="javascript:void(0)"
                                 style="font-size: 13px">
                                 jump to point
                             </a>
@@ -188,14 +190,20 @@ class JwPlayer {
         let point_div = new DOMParser().parseFromString(content, "text/html").body.firstElementChild;
         let point = point_div.querySelector("a.point");
         point.addEventListener("click", function () {
-            player.player.seek(this.dataset.time)
+            player.player.seek(this.dataset.time);
+            let point = document.getElementById(this.dataset.id);
+            let tooltip_container = player.progress_tooltip.parentElement.parentElement.parentElement;
+            let left = player.progress_bar_container.getBoundingClientRect().width;
+            point.style.display = "inline-block";
+            tooltip_container.style.transform = `translateX(${left + 2}px)`;
+            tooltip_container.classList.add("jw-open");
+            player.progress_tooltip.innerHTML = "here";
+            setTimeout(function () {
+                tooltip_container.classList.remove("jw-open");
+                point.style.display = "none";
+            }, 3000);
         });
         this.comment_list_container.appendChild(point_div);
-        /*let points = this.comment_list_container.querySelectorAll("a.point");
-        let point = points[points.length - 1];
-        point.addEventListener("click", function () {
-            console.log(point.dataset.time);
-        });*/
     }
     
     // this method prevents the "add comment form" from being processed
@@ -210,8 +218,8 @@ class JwPlayer {
             player.add_comment_modal.hide();
             title.value = "";
             player.addPointToSideMenu(marker);
-            // let point = player.createPoint(marker);
-            // player.addPointToProgress(point);
+            let point = player.createPoint(marker);
+            player.addPointToProgress(point);
         });
     }
     
@@ -223,8 +231,8 @@ class JwPlayer {
             for (const marker of markers) {
                 if (marker.time <= duration) {
                     player.addPointToSideMenu(marker);
-                    // let point = player.createPoint(marker);
-                    // player.addPointToProgress(point);
+                    let point = player.createPoint(marker);
+                    player.addPointToProgress(point);
                 }
             }
         });
@@ -306,6 +314,7 @@ class JwPlayer {
             side_menu.style.backgroundColor = "#1a1a1aba";
             side_menu.style.zIndex = "1080";
             side_menu.style.transition = "all 0.3s";
+            side_menu.style.overflowY = "auto";
             player.comment_list = side_menu;
             wrapper.appendChild(side_menu);
             
