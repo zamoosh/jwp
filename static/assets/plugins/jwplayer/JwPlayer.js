@@ -7,6 +7,8 @@ class JwPlayer {
     add_comment_modal;
     add_comment;
     markers = [];
+    comment_list;
+    comment_list_container;
     
     constructor(elementId, markers) {
         this.player = jwplayer(elementId).setup({
@@ -31,19 +33,21 @@ class JwPlayer {
             // shows a small player on scroll
             // "floating": {
             //     "dismissible": true
-            // },
-            image: "./media/images/logo.jpg",
+            // },`
+            image: "./media/images/1218.jpg",
             width: "100%",
             height: "100%",
             stretching: "bestfit"
         });
         this.addCommentButton();
+        this.addCommentList(elementId);
         this.preventForm();
         if (markers) {
             this.updateMarkers(markers);
             this.setMarkers(this.markers);
         }
         this.fixPointPosition();
+        this.jumpToPoint();
     }
     
     // this method adds "add comment" button.
@@ -111,6 +115,8 @@ class JwPlayer {
             point.style.zIndex = "1080";
             point.style.backgroundColor = "red";
             point.style.transition = "all 0.1s";
+            point.style.display = "none";
+            point.id = `point${marker.id}`;
             point.dataset.text = marker.title;
             point.addEventListener("mousemove", function () {
                 player.progress_tooltip.style.fontSize = "16px";
@@ -120,7 +126,7 @@ class JwPlayer {
                     let left_space = Number(point.style.left.replace("px", ""));
                     if ((space * 120) + 20 < left_space) {
                         space = space * 120;
-                        break
+                        break;
                     }
                     space--;
                 }
@@ -152,6 +158,54 @@ class JwPlayer {
         this.progress_bar_container.appendChild(point);
     }
     
+    addPointToSideMenu(marker) {
+        let player = this;
+        let content = `
+            <div class="rounded my-1" style="background-color: #b5b5b54a">
+                <a class="btn btn-sm text-white w-100 text-start"
+                   data-bs-toggle="collapse"
+                   href="#marker${marker.id}"
+                   role="button"
+                   aria-expanded="false"
+                   aria-controls="marker${marker.id}">
+                    ${marker.title.split(" ").slice(0, 1)} ...
+                </a>
+                <div class="collapse w-100" id="marker${marker.id}">
+                    <div class="text-white m-2">
+                        <p style="-moz-user-select: text; user-select: text">${marker.title}</p>
+                        <p class="d-flex justify-content-between">
+                            <span style="-moz-user-select: text; user-select: text; font-size: 13px">
+                                time: ${marker.time}
+                            </span>
+                            <a class="text-decoration-none text-white point"
+                                data-time="${marker.time}" data-id="point${marker.id}" href="javascript:void(0)"
+                                style="font-size: 13px">
+                                jump to point
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            `;
+        let point_div = new DOMParser().parseFromString(content, "text/html").body.firstElementChild;
+        let point = point_div.querySelector("a.point");
+        point.addEventListener("click", function () {
+            player.player.seek(this.dataset.time);
+            let point = document.getElementById(this.dataset.id);
+            let tooltip_container = player.progress_tooltip.parentElement.parentElement.parentElement;
+            let left = player.progress_bar_container.getBoundingClientRect().width;
+            point.style.display = "inline-block";
+            tooltip_container.style.transform = `translateX(${left + 2}px)`;
+            tooltip_container.classList.add("jw-open");
+            player.progress_tooltip.innerHTML = "here";
+            setTimeout(function () {
+                tooltip_container.classList.remove("jw-open");
+                point.style.display = "none";
+            }, 3000);
+        });
+        this.comment_list_container.appendChild(point_div);
+    }
+    
     // this method prevents the "add comment form" from being processed
     preventForm() {
         let player = this;
@@ -163,6 +217,7 @@ class JwPlayer {
             player.markers.push(marker);
             player.add_comment_modal.hide();
             title.value = "";
+            player.addPointToSideMenu(marker);
             let point = player.createPoint(marker);
             player.addPointToProgress(point);
         });
@@ -175,6 +230,7 @@ class JwPlayer {
             let duration = player.player.getDuration();
             for (const marker of markers) {
                 if (marker.time <= duration) {
+                    player.addPointToSideMenu(marker);
                     let point = player.createPoint(marker);
                     player.addPointToProgress(point);
                 }
@@ -220,6 +276,79 @@ class JwPlayer {
                     point.style.left = `${left2}px`;
                 }
             }, 100);
+        });
+    }
+    
+    // this method adds a button to the toolbar to see all points
+    addCommentList(elementId) {
+        let player = this;
+        
+        // toggle side menu (comment list panel)
+        function toggleSideMenu() {
+            let side_menu = player.comment_list;
+            if (side_menu.ariaExpanded === "false") {
+                side_menu.ariaExpanded = "true";
+                side_menu.style.width = "30%";
+            } else {
+                side_menu.ariaExpanded = "false";
+                side_menu.style.width = "0";
+            }
+        }
+        
+        player.player.addButton(
+            "./static/assets/buttons/list.svg",
+            "comment list",
+            toggleSideMenu,
+            "comment list"
+        );
+        
+        this.player.on('ready', function () {
+            let wrapper = document.getElementById(elementId);
+            let side_menu = document.createElement("div");
+            side_menu.ariaExpanded = "false";
+            side_menu.style.width = "0";
+            side_menu.style.height = "100%";
+            side_menu.style.position = "absolute";
+            side_menu.style.top = "0";
+            side_menu.style.right = "0";
+            side_menu.style.backgroundColor = "#1a1a1aba";
+            side_menu.style.zIndex = "1080";
+            side_menu.style.transition = "all 0.3s";
+            side_menu.style.overflowY = "auto";
+            player.comment_list = side_menu;
+            wrapper.appendChild(side_menu);
+            
+            let close = document.createElement("button");
+            close.classList.add("btn");
+            close.innerHTML = `
+                <svg style="color: white" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-right" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/>
+                </svg>
+            `;
+            close.style.transition = "all 0.3s";
+            close.style.position = "relative";
+            close.style.left = "10px";
+            close.style.top = "10px";
+            side_menu.appendChild(close);
+            
+            let side_menu_container = document.createElement("div");
+            side_menu_container.classList.add("container", "mt-3", "d-flex", "flex-column");
+            side_menu.appendChild(side_menu_container);
+            
+            player.comment_list_container = side_menu_container;
+            
+            close.addEventListener('click', function () {
+                toggleSideMenu();
+            });
+        });
+    }
+    
+    jumpToPoint() {
+        let points = document.querySelectorAll('a.point');
+        points.forEach(function (point) {
+            point.addEventListener('click', function () {
+                console.log(point);
+            });
         });
     }
 }
