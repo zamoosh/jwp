@@ -9,6 +9,7 @@ class JwPlayer {
     markers = [];
     comment_list;
     comment_list_container;
+    loaded_points = false;
     
     constructor(elementId, markers) {
         this.player = jwplayer(elementId).setup({
@@ -227,13 +228,16 @@ class JwPlayer {
     setMarkers(markers) {
         let player = this;
         this.player.on("firstFrame", function () {
-            let duration = player.player.getDuration();
-            for (const marker of markers) {
-                if (marker.time <= duration) {
-                    player.addPointToSideMenu(marker);
-                    let point = player.createPoint(marker);
-                    player.addPointToProgress(point);
+            if (player.loaded_points === false) {
+                let duration = player.player.getDuration();
+                for (const marker of markers) {
+                    if (marker.time <= duration) {
+                        player.addPointToSideMenu(marker);
+                        let point = player.createPoint(marker);
+                        player.addPointToProgress(point);
+                    }
                 }
+                player.loaded_points = true;
             }
         });
     }
