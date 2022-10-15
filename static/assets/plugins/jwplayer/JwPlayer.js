@@ -8,6 +8,7 @@ class JwPlayer {
     add_comment;
     markers = [];
     comment_list;
+    comment_list_container;
     
     constructor(elementId, markers) {
         this.player = jwplayer(elementId).setup({
@@ -32,8 +33,8 @@ class JwPlayer {
             // shows a small player on scroll
             // "floating": {
             //     "dismissible": true
-            // },
-            image: "./media/images/logo.jpg",
+            // },`
+            image: "./media/images/1218.jpg",
             width: "100%",
             height: "100%",
             stretching: "bestfit"
@@ -46,6 +47,7 @@ class JwPlayer {
             this.setMarkers(this.markers);
         }
         this.fixPointPosition();
+        this.jumpToPoint();
     }
     
     // this method adds "add comment" button.
@@ -154,6 +156,48 @@ class JwPlayer {
         this.progress_bar_container.appendChild(point);
     }
     
+    addPointToSideMenu(marker) {
+        let player = this;
+        let content = `
+            <div class="rounded my-1" style="background-color: #b5b5b54a">
+                <a class="btn btn-sm text-white w-100 text-start"
+                   data-bs-toggle="collapse"
+                   href="#marker${marker.id}"
+                   role="button"
+                   aria-expanded="false"
+                   aria-controls="marker${marker.id}">
+                    ${marker.title.split(" ").slice(0, 1)} ...
+                </a>
+                <div class="collapse w-100" id="marker${marker.id}">
+                    <div class="text-white m-2">
+                        <p style="-moz-user-select: text; user-select: text">${marker.title}</p>
+                        <p class="d-flex justify-content-between">
+                            <span style="-moz-user-select: text; user-select: text; font-size: 13px">
+                                time: ${marker.time}
+                            </span>
+                            <a class="text-decoration-none text-white point"
+                                data-time="${marker.time}" href="javascript:void(0)"
+                                style="font-size: 13px">
+                                jump to point
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            `;
+        let point_div = new DOMParser().parseFromString(content, "text/html").body.firstElementChild;
+        let point = point_div.querySelector("a.point");
+        point.addEventListener("click", function () {
+            player.player.seek(this.dataset.time)
+        });
+        this.comment_list_container.appendChild(point_div);
+        /*let points = this.comment_list_container.querySelectorAll("a.point");
+        let point = points[points.length - 1];
+        point.addEventListener("click", function () {
+            console.log(point.dataset.time);
+        });*/
+    }
+    
     // this method prevents the "add comment form" from being processed
     preventForm() {
         let player = this;
@@ -165,8 +209,9 @@ class JwPlayer {
             player.markers.push(marker);
             player.add_comment_modal.hide();
             title.value = "";
-            let point = player.createPoint(marker);
-            player.addPointToProgress(point);
+            player.addPointToSideMenu(marker);
+            // let point = player.createPoint(marker);
+            // player.addPointToProgress(point);
         });
     }
     
@@ -177,8 +222,9 @@ class JwPlayer {
             let duration = player.player.getDuration();
             for (const marker of markers) {
                 if (marker.time <= duration) {
-                    let point = player.createPoint(marker);
-                    player.addPointToProgress(point);
+                    player.addPointToSideMenu(marker);
+                    // let point = player.createPoint(marker);
+                    // player.addPointToProgress(point);
                 }
             }
         });
@@ -248,7 +294,7 @@ class JwPlayer {
             "comment list"
         );
         
-        this.player.on('firstFrame', function () {
+        this.player.on('ready', function () {
             let wrapper = document.getElementById(elementId);
             let side_menu = document.createElement("div");
             side_menu.ariaExpanded = "false";
@@ -271,13 +317,28 @@ class JwPlayer {
                 </svg>
             `;
             close.style.transition = "all 0.3s";
-            close.style.position = "absolute";
+            close.style.position = "relative";
             close.style.left = "10px";
             close.style.top = "10px";
             side_menu.appendChild(close);
             
+            let side_menu_container = document.createElement("div");
+            side_menu_container.classList.add("container", "mt-3", "d-flex", "flex-column");
+            side_menu.appendChild(side_menu_container);
+            
+            player.comment_list_container = side_menu_container;
+            
             close.addEventListener('click', function () {
                 toggleSideMenu();
+            });
+        });
+    }
+    
+    jumpToPoint() {
+        let points = document.querySelectorAll('a.point');
+        points.forEach(function (point) {
+            point.addEventListener('click', function () {
+                console.log(point);
             });
         });
     }
